@@ -20,6 +20,10 @@ class Listing(models.Model):
 	imageUrl = models.URLField()
 	category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name="listings")
 
+	# def updatePrice(self):
+	# 	bids = self.bids.all()
+
+
 	def __str__(self):
 		return f"{self.title} currently selling at ${self.currentPrice}"
 
