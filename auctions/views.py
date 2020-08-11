@@ -11,7 +11,8 @@ from .models import User, Listing
 
 
 def index(request):
-    return render(request, "auctions/index.html")
+
+    return render(request, "auctions/index.html", {"listings": Listing.objects.filter(isActive=True).values()})
 
 
 def login_view(request):
@@ -68,16 +69,15 @@ def register(request):
 
 @login_required(login_url="/login")
 def create_listing(request):
-    NewListingForm = modelform_factory(Listing, exclude=("user",))
+    NewListingForm = modelform_factory(Listing, exclude=("user","isActive"))
 
     if request.method == "POST":
 
         form = NewListingForm(request.POST)
         try:
-            if form.is_valid():
-                print("omo")
             listing = form.save(commit=False)
             listing.user = request.user
+            listing.isActive = True
             listing.save()
         except:
             return render(request, "auctions/create_listing.html", {"form":form})

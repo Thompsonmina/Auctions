@@ -24,6 +24,12 @@
                 <li class="nav-item">
                     <a class="nav-link" href="{% url 'logout' %}">Log Out</a>
                 </li>
+                
+                <li class="nav-item">
+                   <a href='{% url "create_listing" %}'> Create a listing</a>
+                </li>
+                   
+
             {% else %}
                 <li class="nav-item">
                     <a class="nav-link" href="{% url 'login' %}">Log In</a>

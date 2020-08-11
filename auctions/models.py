@@ -12,12 +12,13 @@ class Category(models.Model):
 		return self.name
 
 class Listing(models.Model):
-	title = models.CharField(max_length=100)
+	title = models.CharField("Listing Title",max_length=100)
 	user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="listings")
-	currentPrice = models.DecimalField(max_digits=12, decimal_places=2)
-	description = models.TextField()
+	currentPrice = models.DecimalField("Start price", max_digits=12, decimal_places=2)
+	description = models.TextField("Listing Description")
 	isActive = models.BooleanField()
-	imageUrl = models.URLField()
+	imageUrl = models.URLField("Image Link", default="https://www.freeiconspng.com/uploads/no-image-icon-4.png",
+	 help_text="enter an optional image link for your listing")
 
 	DEFAULTCATEGORY = "Untagged"
 	category = models.ForeignKey(Category, on_delete=models.CASCADE, to_field="name", related_name="listings",
@@ -25,8 +26,6 @@ class Listing(models.Model):
 
 	# def updatePrice(self):
 	# 	bids = self.bids.all()
-
-
 	def __str__(self):
 		return f"{self.title} currently selling at ${self.currentPrice}"
 

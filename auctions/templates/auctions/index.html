@@ -3,7 +3,12 @@
 {% block body %}
     <h2>Active Listings</h2>
 
-    <a href='{% url "create_listing" %}'> Create a listing</a>
+    {%for listing in listings%}
+    	<div>
+    		{{ listing }}
 
-    TODO
+    	</div>
+    {% endfor %}
+
+
 {% endblock %}

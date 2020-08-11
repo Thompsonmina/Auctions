@@ -58,7 +58,7 @@ class AuthViewsTests(TestCase):
 		response = self.client.get(reverse("login"))
 
 		self.assertEqual(response.status_code, 200)
-		self.assertTemplateUsed(response, template_name="/auctions/login.html")
+		self.assertTemplateUsed(response, template_name="auctions/login.html")
 
 	def test_login_route_user_login_successful(self):
 		""" test that a user has successfully been logged in"""
@@ -83,7 +83,7 @@ class AuthViewsTests(TestCase):
 		response = self.client.get(reverse("register"))
 
 		self.assertEqual(response.status_code, 200)
-		self.assertTemplateUsed(response, template_name="/auctions/register.html")
+		self.assertTemplateUsed(response, template_name="auctions/register.html")
 
 	def test_register_route_user_created_successfully(self):
 		""" test to ensure that a user was created successfuly"""
@@ -115,13 +115,26 @@ class MainViewsTests(TestCase):
 		super().setUpClass()
 		cls.category = Category.objects.create(name="random")
 		cls.user = User.objects.create_user(username="Tims", password="tiktok")
+		# dummy listings
+		list1 = Listing.objects.create(title="invisible_bag", user=cls.user, currentPrice=Decimal(49.90).quantize(Decimal("0.01")),
+					description="this is a description of stuff that happens when stuff happens",
+					isActive=True, imageUrl="https://www.image.com", category=cls.category)
+	
+
+		list2 = Listing.objects.create(title="invisible_bag", user=cls.user, currentPrice=Decimal(49.90).quantize(Decimal("0.01")),
+					description="this is a description of stuff that happens when stuff happens",
+					isActive=True, imageUrl="https://www.image.com", category=cls.category)
+	
 
 	def test_index_route(self):
 		""" test the index view"""
 		response = self.client.get(reverse("index"))
 
+		
+
 		self.assertEqual(200, response.status_code)
 		self.assertTemplateUsed(response, template_name="auctions/index.html")
+		self.assertEqual(2, len(response.context["listings"]))
 
 	def test_create_listing_route_onGet(self):
 		""" test that the html displays on get"""
@@ -134,13 +147,13 @@ class MainViewsTests(TestCase):
 	def test_create_listing_route_listing_successfully_created_onPOST(self):
 		""" test that a listing is created successfully """
 		self.client.force_login(self.user)
-		data = dict(title="invisible_bag", currentPrice=Decimal(49.90).quantize(Decimal("0.01")),
+		data = dict(title="testobject", currentPrice=Decimal(49.90).quantize(Decimal("0.01")),
 					description="this is a description of stuff that happens when stuff happens",
-					isActive=True, imageUrl="https://www.image.com", category=self.category)
+					imageUrl="https://www.image.com", category=self.category)
 	
 		response = self.client.post(reverse("create_listing"), data=data, follow=True)
 		
-		self.assertEqual(1, len(Listing.objects.all()))
+		self.assertEqual(1, len(Listing.objects.filter(title="testobject")))
 		self.assertRedirects(response, reverse("index"))
 
 	def test_create_listing_route_failed_onPOST(self):
