@@ -1,10 +1,13 @@
 from django.contrib.auth import authenticate, login, logout
-from django.db import IntegrityError
-from django.http import HttpResponse, HttpResponseRedirect
-from django.shortcuts import render
-from django.urls import reverse
 
-from .models import User
+from django.http import HttpResponse, HttpResponseRedirect
+from django.shortcuts import render, redirect
+from django.urls import reverse
+from django.db import IntegrityError
+from django.forms import modelform_factory
+from django.contrib.auth.decorators import login_required
+
+from .models import User, Listing
 
 
 def index(request):
@@ -37,6 +40,7 @@ def logout_view(request):
 
 
 def register(request):
+
     if request.method == "POST":
         username = request.POST["username"]
         email = request.POST["email"]
@@ -61,3 +65,24 @@ def register(request):
         return HttpResponseRedirect(reverse("index"))
     else:
         return render(request, "auctions/register.html")
+
+@login_required(login_url="/login")
+def create_listing(request):
+    NewListingForm = modelform_factory(Listing, exclude=("user",))
+
+    if request.method == "POST":
+
+        form = NewListingForm(request.POST)
+        try:
+            if form.is_valid():
+                print("omo")
+            listing = form.save(commit=False)
+            listing.user = request.user
+            listing.save()
+        except:
+            return render(request, "auctions/create_listing.html", {"form":form})
+
+        return redirect(reverse("index"))
+    else:
+        return render(request, "auctions/create_listing.html",{ 
+                        "form":NewListingForm()})

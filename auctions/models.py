@@ -12,13 +12,16 @@ class Category(models.Model):
 		return self.name
 
 class Listing(models.Model):
-	title = models.CharField(max_length=100, unique=True)
+	title = models.CharField(max_length=100)
 	user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="listings")
 	currentPrice = models.DecimalField(max_digits=12, decimal_places=2)
 	description = models.TextField()
 	isActive = models.BooleanField()
 	imageUrl = models.URLField()
-	category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name="listings")
+
+	DEFAULTCATEGORY = "Untagged"
+	category = models.ForeignKey(Category, on_delete=models.CASCADE, to_field="name", related_name="listings",
+									 default=DEFAULTCATEGORY)
 
 	# def updatePrice(self):
 	# 	bids = self.bids.all()
@@ -41,5 +44,5 @@ class Comment(models.Model):
 	listing = models.ForeignKey(Listing, on_delete=models.CASCADE, related_name="comments")
 	
 	def __str__(self):
-		return f"{self.commenter.first_name}'s comment"
+		return f"{self.commenter.get_username()}'s comment"
 
