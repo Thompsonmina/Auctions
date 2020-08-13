@@ -7,7 +7,7 @@ from django.db import IntegrityError
 from django.forms import modelform_factory
 from django.contrib.auth.decorators import login_required
 
-from .models import User, Listing
+from .models import User, Listing, Category
 
 
 def index(request):
@@ -69,14 +69,14 @@ def register(request):
 
 @login_required(login_url="/login")
 def create_listing(request):
-    NewListingForm = modelform_factory(Listing, exclude=("user","isActive"))
+    NewListingForm = modelform_factory(Listing, exclude=("seller","isActive"))
 
     if request.method == "POST":
 
         form = NewListingForm(request.POST)
         try:
             listing = form.save(commit=False)
-            listing.user = request.user
+            listing.seller = request.user
             listing.isActive = True
             listing.save()
         except:
@@ -86,3 +86,18 @@ def create_listing(request):
     else:
         return render(request, "auctions/create_listing.html",{ 
                         "form":NewListingForm()})
+
+def categories(request):
+    categories = Category.objects.all().values_list("name", flat=True).order_by("name")
+    
+    return render(request, "auctions/categories.html", {"categories":categories})
+
+def category_listings(request, category):
+
+    try:
+        category = Category.objects.get(name=category)
+    except  Category.DoesNotExist:
+        return render(request, "auctions/errors.html", {"error_message":f"error: {category} category not valid"})
+
+    category_listings = category.listings.filter(isActive=True).values_list("title", flat=True)
+    return render(request, "auctions/category_listings.html", {"listings":category_listings})

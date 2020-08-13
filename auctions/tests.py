@@ -13,7 +13,7 @@ class ModelTests(TestCase):
 		super().setUpClass()
 		cls.mike = User.objects.create_user(username="mike", password="dougyeahboyyes")
 		cls.games = Category.objects.create(name="games")
-		cls.cloak = Listing.objects.create(title="invisible_cloak", user=cls.mike, currentPrice=49.90,
+		cls.cloak = Listing.objects.create(title="invisible_cloak", seller=cls.mike, currentPrice=49.90,
 					description="this is a description of stuff that happens when stuff happens",
 					isActive=True, imageUrl="imageurleggo", category=cls.games)
 	
@@ -22,7 +22,7 @@ class ModelTests(TestCase):
 						commenter=cls.mike, listing=cls.cloak)
 		
 		cls.BID_AMOUNT = Decimal(2321.34).quantize(Decimal("0.01"))
-		cls.bid = Bid.objects.create(amount=cls.BID_AMOUNT, listing=cls.cloak, user=cls.mike)
+		cls.bid = Bid.objects.create(amount=cls.BID_AMOUNT, listing=cls.cloak, owner=cls.mike)
 		
 	def test_category_created_well(self):
 		""" check that a category is created well"""
@@ -116,12 +116,12 @@ class MainViewsTests(TestCase):
 		cls.category = Category.objects.create(name="random")
 		cls.user = User.objects.create_user(username="Tims", password="tiktok")
 		# dummy listings
-		list1 = Listing.objects.create(title="invisible_bag", user=cls.user, currentPrice=Decimal(49.90).quantize(Decimal("0.01")),
+		list1 = Listing.objects.create(title="invisible_bag", seller=cls.user, currentPrice=Decimal(49.90).quantize(Decimal("0.01")),
 					description="this is a description of stuff that happens when stuff happens",
 					isActive=True, imageUrl="https://www.image.com", category=cls.category)
 	
 
-		list2 = Listing.objects.create(title="invisible_bag", user=cls.user, currentPrice=Decimal(49.90).quantize(Decimal("0.01")),
+		list2 = Listing.objects.create(title="cloak_of_hiding", seller=cls.user, currentPrice=Decimal(49.90).quantize(Decimal("0.01")),
 					description="this is a description of stuff that happens when stuff happens",
 					isActive=True, imageUrl="https://www.image.com", category=cls.category)
 	
@@ -130,11 +130,10 @@ class MainViewsTests(TestCase):
 		""" test the index view"""
 		response = self.client.get(reverse("index"))
 
-		
-
 		self.assertEqual(200, response.status_code)
 		self.assertTemplateUsed(response, template_name="auctions/index.html")
-		self.assertEqual(2, len(response.context["listings"]))
+		# ensure that the correct listings are sent
+		self.assertEqual(len(Listing.objects.all()), len(response.context["listings"]))
 
 	def test_create_listing_route_onGet(self):
 		""" test that the html displays on get"""
@@ -171,3 +170,37 @@ class MainViewsTests(TestCase):
 		response = self.client.get(reverse("create_listing"), follow=True)
 		
 		self.assertRedirects(response, "/login?next=/create_listing")
+
+	def test_categories_route(self):
+		""" test to ensure that the categories route works"""
+		response = self.client.get(reverse("categories"))
+
+		self.assertEqual(200, response.status_code)
+		self.assertTemplateUsed(response, template_name="auctions/categories.html")
+		# ensure that all the categories are sent in the response
+		self.assertEqual(len(Category.objects.all()), len(response.context["categories"]))
+
+	def test_category_listings_route_valid_category(self):
+		""" test for the listings in a single valid category route"""
+
+		# set a valid category
+		category = Category.objects.get(pk=1).name
+		response = self.client.get(reverse("category_listings", args=[category]))
+
+		self.assertEqual(200, response.status_code)
+		self.assertTemplateUsed(response, template_name="auctions/category_listings.html")
+		# ensure that the correct listings are sent
+		self.assertEqual(2, len(response.context["listings"]))
+
+	def test_category_listing_route_invalid_category(self):
+		""" test to ensure that an invalid category to the route results in a 
+			error 
+		"""
+		category = "invalid Category"
+		response = self.client.get(reverse("category_listings", args=[category]))
+
+		self.assertEqual(200, response.status_code)
+		self.assertIn("error", response.context["error_message"])
+		self.assertTemplateUsed(response, template_name="auctions/errors.html")
+
+

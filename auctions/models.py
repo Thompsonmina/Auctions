@@ -12,12 +12,14 @@ class Category(models.Model):
 		return self.name
 
 class Listing(models.Model):
-	title = models.CharField("Listing Title",max_length=100)
-	user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="listings")
+	title = models.CharField("Listing Title", max_length=100)
+	seller = models.ForeignKey(User, on_delete=models.CASCADE, related_name="listings")
 	currentPrice = models.DecimalField("Start price", max_digits=12, decimal_places=2)
 	description = models.TextField("Listing Description")
 	isActive = models.BooleanField()
-	imageUrl = models.URLField("Image Link", default="https://www.freeiconspng.com/uploads/no-image-icon-4.png",
+
+	DEFAULTIMAGE = "https://www.freeiconspng.com/uploads/no-image-icon-4.png"
+	imageUrl = models.URLField("Image Link", default=DEFAULTIMAGE,
 	 help_text="enter an optional image link for your listing")
 
 	DEFAULTCATEGORY = "Untagged"
@@ -32,7 +34,7 @@ class Listing(models.Model):
 class Bid(models.Model):
 	amount = models.DecimalField(max_digits=12, decimal_places=2)
 	listing = models.ForeignKey(Listing, on_delete=models.CASCADE, related_name="bids")
-	user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="bids")
+	owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name="bids")
 
 	def __str__(self):
 		return f"bid for {self.listing.title}"
