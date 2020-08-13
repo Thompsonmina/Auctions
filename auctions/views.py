@@ -12,6 +12,10 @@ from .models import User, Listing, Category
 
 def index(request):
 
+    # create a watchlist for a user if Logged in and the watchlist doesn't yet exist
+    if request.user.is_authenticated and "watchlist" not in request.session:
+        request.session["watchlist"] = []
+    
     return render(request, "auctions/index.html", {"listings": Listing.objects.filter(isActive=True).values()})
 
 

@@ -135,6 +135,19 @@ class MainViewsTests(TestCase):
 		# ensure that the correct listings are sent
 		self.assertEqual(len(Listing.objects.all()), len(response.context["listings"]))
 
+	def test_index_route_watchlist_created_when_logged_in(self):
+		self.client.force_login(self.user)
+		response = self.client.get(reverse("index"))
+
+		# ensure that a watch list was created for the user
+		self.assertIn("watchlist", self.client.session)
+	
+	def test_index_route_watchlist_not_created_when_not_logged_in(self):
+		response = self.client.get(reverse("index"))
+
+		# ensure that a watchlist wasnt created as user isn't logged in
+		self.assertNotIn("watchlist", self.client.session)
+
 	def test_create_listing_route_onGet(self):
 		""" test that the html displays on get"""
 		self.client.force_login(self.user)
