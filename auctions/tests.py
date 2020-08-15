@@ -1,9 +1,20 @@
-from django.test import TestCase
+from django.test import TestCase, Client
 from django.urls import reverse
+from django.conf import settings
+
+from importlib import import_module
 from decimal import *
 
-
 from .models import User, Listing, Bid, Comment, Category
+
+class PersistentSessionClient(Client):
+	""" utility class to be able use persistent data in test sessions"""
+	@property
+	def session(self):
+		if not hasattr(self, "_persisted_session"):
+			engine = import_module(settings.SESSION_ENGINE)
+			self._persisted_session = engine.SessionStore("persistent")
+		return self._persisted_session
 
 class ModelTests(TestCase):
 
@@ -43,7 +54,6 @@ class ModelTests(TestCase):
 		""" check that a listing is created well"""
 		self.assertIsInstance(self.comment, Comment)
 		self.assertEqual(self.A_COMMENT, Comment.objects.get(id=1).comment)
-
 
 class AuthViewsTests(TestCase):
 	
@@ -107,7 +117,6 @@ class AuthViewsTests(TestCase):
 
 		self.assertEqual(200, response.status_code)
 		self.assertIsNotNone(response.context["message"])
-
 
 class MainViewsTests(TestCase):
 	@classmethod
@@ -182,7 +191,7 @@ class MainViewsTests(TestCase):
 	def test_create_listing_route_redirects_when_loggedout(self):
 		response = self.client.get(reverse("create_listing"), follow=True)
 		
-		self.assertRedirects(response, "/login?next=/create_listing")
+		self.assertRedirects(response, f"/login?next={reverse('create_listing')}")
 
 	def test_categories_route(self):
 		""" test to ensure that the categories route works"""
@@ -215,5 +224,35 @@ class MainViewsTests(TestCase):
 		self.assertEqual(200, response.status_code)
 		self.assertIn("error", response.context["error_message"])
 		self.assertTemplateUsed(response, template_name="auctions/errors.html")
+
+	def test_watchlist_route_displays(self):
+		self.client.force_login(self.user)
+		response = self.client.get(reverse("show_watchlist"))
+
+		self.assertEqual(200, response.status_code)
+		self.assertTemplateUsed(response, template_name="auctions/watchlist.html")
+
+	def test_watchlist_route_returns_user_listings(self):
+		""" ensure that the the correct watchlist listings are returned"""
+		client = PersistentSessionClient()
+		client.force_login(self.user)
+
+		listings = list(Listing.objects.all().values_list("title", flat=True))
+		client.session["watchlist"] = listings
+		client.session.save()
+		response = client.get(reverse("show_watchlist"))
+		
+		# check that the listings returned are the listings in the session
+		
+		self.assertListEqual(listings, response.context["listings"])
+
+	def test_watchlist_route_redirects_when_logged_out(self):
+		response = self.client.get(reverse("show_watchlist"), follow=True)
+		
+		self.assertRedirects(response, f"/login?next={reverse('show_watchlist')}")
+
+
+
+
 
 

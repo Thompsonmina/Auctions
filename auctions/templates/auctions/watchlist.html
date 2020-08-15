@@ -1,0 +1,15 @@
+{% extends "auctions/layout.html" %}
+
+{% block body %}
+
+    <h2> Active Listings on your watchlist</h2>
+    <h3> Remember that you can add and remove listing from your watch list in a listing's page</h3>
+    
+    {%for listing in listings%}
+    	<div>
+    		{{ listing }}
+    	</div>
+    {% endfor %}
+
+
+{% endblock %}
