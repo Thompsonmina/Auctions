@@ -1,11 +1,14 @@
 from django.contrib.auth import authenticate, login, logout
-
-from django.http import HttpResponse, HttpResponseRedirect
-from django.shortcuts import render, redirect
-from django.urls import reverse
+from django.contrib.auth.decorators import login_required
+from django.core.serializers import serialize
 from django.db import IntegrityError
 from django.forms import modelform_factory
-from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
+from django.shortcuts import render, redirect
+
+from django.urls import reverse
+
+
 
 from .models import User, Listing, Category
 
@@ -55,15 +58,54 @@ def category_listings(request, category):
     except  Category.DoesNotExist:
         return render(request, "auctions/errors.html", {"error_message":f"error: {category} category not valid"})
 
-    category_listings = category.listings.filter(isActive=True).values_list("title", flat=True)
+    category_listings = category.listings.filter(isActive=True).values()
     return render(request, "auctions/category_listings.html", {"listings":category_listings})
+
+def single_listing(request, listing):
+    # on get display the listing if parameters are valid
+    listing = Listing.objects.filter(id=request.GET["id"], title=listing).values()
+    if listing.exists():
+        return render(request, "auctions/single_listing.html",{
+            "listing_details":listing[0]
+        })
+    else:
+        return render(request, "auctions/errors.html", {
+            "error_message":"error: listing does not exist"
+        })
 
 @login_required(login_url="/login")
 def watchlist(request):
+    # returns the listings in a watchlist 
+    listofPks = request.session["watchlist"]
+    print(listofPks)
     return render(request, "auctions/watchlist.html", 
-        {"listings":request.session.get("watchlist", None)})
+        {"listings": Listing.objects.in_bulk(listofPks).values()})
 
+@login_required(login_url="/login")
+def add_or_delete_from_watchlist(request):
+    try:
+        listing_id = request.GET["listing_id"]
+        action = request.GET["action"]
+    except:
+        return JsonResponse({"success":False, "error":"invalid argument(s)"})
 
+    listing = Listing.objects.filter(pk=listing_id,isActive=True)
+    watchlist = request.session["watchlist"]
+
+    if action.lower() == "add" and listing:
+        if listing[0].id not in watchlist:
+            watchlist.append(listing[0].id) 
+            request.session["watchlist"] = watchlist
+
+    elif action.lower() == "delete" and listing:
+        watchlist.remove(listing[0].id)
+        request.session["watchlist"] = watchlist
+    else:
+        return JsonResponse({"success":False, "error":"invalid argument(s)"})
+
+    return JsonResponse({"success":True})
+
+""" Authentication views """
 def login_view(request):
     if request.method == "POST":
 

@@ -226,33 +226,74 @@ class MainViewsTests(TestCase):
 		self.assertTemplateUsed(response, template_name="auctions/errors.html")
 
 	def test_watchlist_route_displays(self):
-		self.client.force_login(self.user)
-		response = self.client.get(reverse("show_watchlist"))
+		client = PersistentSessionClient()
+		client.force_login(self.user)
+		client.session["watchlist"] = []
+		client.session.save()
+		response = client.get(reverse("show_watchlist"))
 
 		self.assertEqual(200, response.status_code)
 		self.assertTemplateUsed(response, template_name="auctions/watchlist.html")
 
 	def test_watchlist_route_returns_user_listings(self):
 		""" ensure that the the correct watchlist listings are returned"""
+		# using an extended client object in order to be able to manipulate sessions
 		client = PersistentSessionClient()
 		client.force_login(self.user)
 
-		listings = list(Listing.objects.all().values_list("title", flat=True))
+		listings = list(Listing.objects.all().values_list("pk", flat=True))
 		client.session["watchlist"] = listings
 		client.session.save()
 		response = client.get(reverse("show_watchlist"))
 		
 		# check that the listings returned are the listings in the session
 		
-		self.assertListEqual(listings, response.context["listings"])
+		self.assertEqual(len(listings), len(response.context["listings"]))
 
 	def test_watchlist_route_redirects_when_logged_out(self):
 		response = self.client.get(reverse("show_watchlist"), follow=True)
 		
 		self.assertRedirects(response, f"/login?next={reverse('show_watchlist')}")
 
+	def test_single_listing_route_displays_with_valid_arguments(self):
+		""" ensure that the page displays if the id and listing name passed to
+		the url are valid """
 
+		listing = Listing.objects.filter(id=1).values()[0]
+		response = self.client.get(reverse("single_listing", args=[listing["title"]]),
+				data={"id":1
+			})
 
+		self.assertEqual(200, response.status_code)
+		self.assertTemplateUsed(response, template_name="auctions/single_listing.html")
+		self.assertDictEqual(listing, response.context["listing_details"])
 
+	def test_single_listing_route_fails_with_invalid_arguments(self):
+		""" ensure that an error page is rendered if wrong arguments are passed """
 
+		listing = "non-existent-name"
+		response = self.client.get(reverse("single_listing", args=[listing]), data={"id":2})
 
+		self.assertEqual(200, response.status_code)
+		self.assertTemplateUsed(response, template_name="auctions/errors.html")
+
+	def test_add_or_remove_from_watchlist_route_add(self):
+		""" ensure that a listing is added to a watchlist """		
+		client = PersistentSessionClient()
+		client.force_login(self.user)
+
+		client.session["watchlist"] = []
+		client.session.save()
+		response = client.get(reverse("edit_watchlist"), data={"action":"add", 
+			"listing_id":1
+			})
+		self.assertJSONEqual(str(response.content, encoding="utf8"),
+				 {"success":True})
+
+	def test_add_or_remove_from_watchlist_route_failure(self):
+		""" ensure that the route fails when given wrong arguements"""
+		self.client.force_login(self.user)
+
+		response = self.client.get(reverse("edit_watchlist"), data={})
+		self.assertJSONEqual(str(response.content, encoding="utf8"), 
+			{"success":False, "error":"invalid argument(s)"})

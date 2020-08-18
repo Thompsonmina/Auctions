@@ -7,7 +7,7 @@
     
     {%for listing in listings%}
     	<div>
-    		{{ listing }}
+    		<a href="{% url 'single_listing' listing=listing.title %}?id={{ listing.id }}">{{ listing }}</a>
     	</div>
     {% endfor %}
 
