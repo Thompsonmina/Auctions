@@ -5,18 +5,18 @@ from django.db import IntegrityError
 from django.forms import modelform_factory
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import render, redirect
-
 from django.urls import reverse
 
+from decimal import *
 
 
-from .models import User, Listing, Category
+from .models import User, Listing, Category, Bid
 
 
 def index(request):
     """ render the all the active listings """
 
-    # todo implement pagination
+    # todo implement
     # create a watchlist for a user if Logged in and the watchlist doesn't yet exist
     if request.user.is_authenticated and "watchlist" not in request.session:
         request.session["watchlist"] = []
@@ -30,7 +30,7 @@ def create_listing(request):
 
     if request.method == "POST":
 
-        # validate and save from the form to the data to the database
+        # validate and save from the formdata to the database
         form = NewListingForm(request.POST)
         try:
             listing = form.save(commit=False)
@@ -63,35 +63,90 @@ def category_listings(request, category):
 
 def single_listing(request, listing):
     # on get display the listing if parameters are valid
-    listing = Listing.objects.filter(id=request.GET["id"], title=listing).values()
-    if listing.exists():
-        return render(request, "auctions/single_listing.html",{
-            "listing_details":listing[0]
-        })
-    else:
-        return render(request, "auctions/errors.html", {
+    try:
+        listing = Listing.objects.get(id=request.GET["id"], title=listing)
+    except Listing.DoesNotExist:
+         return render(request, "auctions/errors.html", {
             "error_message":"error: listing does not exist"
         })
+    
+    # if the user is logged in and the listing is closed, check if the user is the winner of the bid
+    if request.user.is_authenticated and listing.isClosed():
+        user_is_winner = listing.highestBidder() == request.user
+    else:
+        user_is_winner = False
+
+    return render(request, "auctions/single_listing.html",{
+        "listing_details":listing, "user_is_winner":user_is_winner
+    })
+       
+
+@login_required(login_url="/login")
+def make_bid(request, listing_id):
+    # create a new bid for a user if the amount she/he submits is valid
+    if request.method == "POST":
+        bid = request.POST["bid"]
+
+         # create a new decimal 
+        try:
+            bid = Decimal(bid).quantize(Decimal("0.01"))
+        except InvalidOperation:
+            return render(request, "auctions/errors.html", {
+                "error_message":"error, invalid parameter"}
+                )
+       # might add test case
+        try:
+            listing = Listing.objects.get(pk=listing_id)
+        except  Listing.DoesNotExist:
+            return render(request, "auctions/errors.html", {"error_message":f"error: listing_id not valid"})
+        
+        # if the bid is valid create a new bid object, save to db and update the listing price
+        if listing.isValidBid(bid):
+            Bid.objects.create(amount=bid, listing=listing, owner=request.user)
+            return redirect(reverse("single_listing", 
+                args=[listing.title]) +f"?id={listing.id}")
+           
+        # render error if the bid doesn't pass requirements
+        return render(request, "auctions/errors.html", {
+            "error_message":"error, your bid is too small"
+        }) 
+
+@login_required(login_url="/login")
+def close_bid(request, listing_id): 
+    try:
+       listing = Listing.objects.get(pk=listing_id) 
+    except  Listing.DoesNotExist:
+        return JsonResponse({"success":False})
+
+    if request.user == listing.seller:
+        listing.isActive = False
+        listing.save()
+        return JsonResponse({"success":True})
+
+    return JsonResponse({"success":False})
 
 @login_required(login_url="/login")
 def watchlist(request):
     # returns the listings in a watchlist 
     listofPks = request.session["watchlist"]
-    print(listofPks)
     return render(request, "auctions/watchlist.html", 
         {"listings": Listing.objects.in_bulk(listofPks).values()})
 
 @login_required(login_url="/login")
 def add_or_delete_from_watchlist(request):
-    try:
+    #adds or removes a listing id from a user's watchlist
+    
+    try: # check if arguments are valid
         listing_id = request.GET["listing_id"]
         action = request.GET["action"]
     except:
         return JsonResponse({"success":False, "error":"invalid argument(s)"})
 
+    # store the listing and clone the session watchlist for modification
     listing = Listing.objects.filter(pk=listing_id,isActive=True)
     watchlist = request.session["watchlist"]
 
+    # add or remove a listing or render an error 
     if action.lower() == "add" and listing:
         if listing[0].id not in watchlist:
             watchlist.append(listing[0].id) 

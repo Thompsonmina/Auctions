@@ -26,8 +26,31 @@ class Listing(models.Model):
 	category = models.ForeignKey(Category, on_delete=models.CASCADE, to_field="name", related_name="listings",
 									 default=DEFAULTCATEGORY)
 
-	# def updatePrice(self):
-	# 	bids = self.bids.all()
+
+	def isClosed(self):
+		""" returns true is a listing is closed"""
+		return not self.isActive
+
+	def isValidBid(self, newBid):
+		""" takes any numerical arguement that can be passed as an arguement
+		to decimal as an arguement and returns true if the bid is bigger than 
+		existing bids"""
+
+		bid = self.bids.all().aggregate(models.Max("amount"))["amount__max"]
+		if bid:
+			return newBid > bid
+		return newBid >= self.currentPrice
+
+	def highestBidder(self):
+		""" returns the owner of the highest bid, or none if listing doesn't exist"""
+		highest_bid = self.bids.all().aggregate(models.Max("amount"))["amount__max"]
+		try:
+			highest_bid = Bid.objects.get(amount=highest_bid)
+		except Bid.DoesNotExist:
+			return None
+
+		return highest_bid.owner
+
 	def __str__(self):
 		return f"{self.title} currently selling at ${self.currentPrice}"
 

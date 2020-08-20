@@ -23,6 +23,7 @@ class ModelTests(TestCase):
 		""" populate the database with some dummy objects to test"""
 		super().setUpClass()
 		cls.mike = User.objects.create_user(username="mike", password="dougyeahboyyes")
+		cls.joe = User.objects.create_user(username="joe", password="jjmyboy")
 		cls.games = Category.objects.create(name="games")
 		cls.cloak = Listing.objects.create(title="invisible_cloak", seller=cls.mike, currentPrice=49.90,
 					description="this is a description of stuff that happens when stuff happens",
@@ -44,6 +45,35 @@ class ModelTests(TestCase):
 		""" check that a listing is created well"""
 		self.assertIsInstance(self.cloak, Listing)
 		self.assertEqual("invisible_cloak", Listing.objects.get(id=1).title)
+
+	def test_listing_method_isValidBid_works(self):
+		""" ensure that the isvalidbid method works as expected"""
+		self.assertTrue(self.cloak.isValidBid(Decimal(4000)))
+		self.assertFalse(self.cloak.isValidBid(Decimal(1290.3)))
+
+	def test_listing_method_highestBidder_works(self):
+		""" ensure that the method returns the expected highest bidder"""
+		low_amount = Decimal(2100.34).quantize(Decimal("0.01"))
+		high_amount = Decimal(1000200.4).quantize(Decimal("0.01"))
+		
+		bid = Bid.objects.create(amount=low_amount, owner=self.mike, 
+			listing=self.cloak
+			)
+		higher_bid = Bid.objects.create(amount=high_amount, owner=self.joe,
+			listing=self.cloak
+			)
+
+		self.assertIsInstance(self.cloak.highestBidder(), User)
+		self.assertEqual(self.cloak.highestBidder(), self.joe)
+
+	def test_listing_method_highestBidder_return_none(self):
+		""" ensure that the method returns none if a listing does not have bids"""
+
+		item = Listing.objects.create(title="invisible_cloak", seller=self.mike, currentPrice=49.90,
+					description="this is a description of stuff that happens when stuff happens",
+					isActive=True, imageUrl="imageurleggo", category=self.games)
+		# no new bids are linked to item
+		self.assertIsNone(item.highestBidder())
 
 	def test_bid_created_well(self):
 		""" check that a bid is created well"""
@@ -259,14 +289,14 @@ class MainViewsTests(TestCase):
 		""" ensure that the page displays if the id and listing name passed to
 		the url are valid """
 
-		listing = Listing.objects.filter(id=1).values()[0]
-		response = self.client.get(reverse("single_listing", args=[listing["title"]]),
+		listing = Listing.objects.get(id=1)
+		response = self.client.get(reverse("single_listing", args=[listing.title]),
 				data={"id":1
 			})
 
 		self.assertEqual(200, response.status_code)
 		self.assertTemplateUsed(response, template_name="auctions/single_listing.html")
-		self.assertDictEqual(listing, response.context["listing_details"])
+		self.assertEqual(listing, response.context["listing_details"])
 
 	def test_single_listing_route_fails_with_invalid_arguments(self):
 		""" ensure that an error page is rendered if wrong arguments are passed """
@@ -276,6 +306,30 @@ class MainViewsTests(TestCase):
 
 		self.assertEqual(200, response.status_code)
 		self.assertTemplateUsed(response, template_name="auctions/errors.html")
+
+	def test_single_listing_route_current_is_the_winner(self):
+		""" ensure that the route knows if the current user won a bid"""
+
+		self.client.force_login(self.user)
+
+		listing = Listing.objects.get(id=1)
+		listing.isActive = False
+		listing.save()
+		Bid.objects.create(amount="100000", owner=self.user, listing=listing)
+		response = self.client.get(reverse("single_listing", args=[listing.title]),
+				data={"id":1
+			})
+
+		self.assertTrue(response.context["user_is_winner"])
+
+	def test_single_listing_route_current_user_isnt_the_winner(self):
+		""" ensure that the route knows if the current user didnt win  a bid"""
+
+		listing = Listing.objects.filter(id=1).values()[0]
+		response = self.client.get(reverse("single_listing", args=[listing["title"]]),
+				data={"id":1
+			})
+		self.assertFalse(response.context["user_is_winner"])
 
 	def test_add_or_remove_from_watchlist_route_add(self):
 		""" ensure that a listing is added to a watchlist """		
@@ -297,3 +351,65 @@ class MainViewsTests(TestCase):
 		response = self.client.get(reverse("edit_watchlist"), data={})
 		self.assertJSONEqual(str(response.content, encoding="utf8"), 
 			{"success":False, "error":"invalid argument(s)"})
+
+	def test_make_bid_route_valid_bid(self):
+		""" ensure that a bid object is created if the bid is valid """
+		self.client.force_login(self.user)
+
+		listing = Listing.objects.get(pk=1)
+		bid = Decimal(5004.34)
+		response = self.client.post(reverse("make_bid", args=[listing.id]), data={
+			"bid":bid
+			})
+
+		self.assertTrue(bid > Bid.objects.get(pk=1).amount)
+		self.assertEqual(1, len(listing.bids.all()))
+
+	def test_make_bid_route_redirects_onSuccess(self):
+
+		self.client.force_login(self.user)
+		
+		listing = Listing.objects.get(pk=1)
+		bid = Decimal(10000.45)
+		response = self.client.post(reverse("make_bid", args=[listing.id]), data={
+			"bid":bid
+		})
+
+		self.assertRedirects(response, reverse("single_listing", 
+                args=[listing.title]) +f"?id={listing.id}")
+
+	def test_make_bid_route_invalid_bid(self):
+		""" ensure that a wrong bid is handled"""
+		self.client.force_login(self.user)
+
+		listing = Listing.objects.get(pk=1)
+		bid = 1
+		response = self.client.post(reverse("make_bid", args=[listing.id]), data={
+			"bid":bid
+		})
+
+		self.assertEqual(200, response.status_code)
+		self.assertTemplateUsed(response, template_name="auctions/errors.html")
+
+	def test_close_bid_route_listing_has_bids(self):
+		""" ensure that a listing is closed if has at least on extra bid"""
+		self.client.force_login(self.user)
+
+		bid = Bid.objects.create(amount=Decimal(77.00), owner=self.user,
+				listing=Listing.objects.get(pk=1)
+			)
+		response = self.client.get(reverse("close_bid", args=[1]))
+		
+		self.assertFalse(Listing.objects.get(pk=1).isActive)
+
+	def test_close_bid_route_invalid_listing(self):
+		""" ensure that an error page is rendered if the listing id is not valid """
+		self.client.force_login(self.user)
+
+		bid = Bid.objects.create(amount=123, owner=self.user, 
+			listing=Listing.objects.get(pk=1))
+
+		response = self.client.get(reverse("close_bid", args=[1300]))
+		self.assertJSONEqual(str(response.content, encoding="utf8"), 
+			{"success":False
+		})
