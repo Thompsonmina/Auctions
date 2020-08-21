@@ -10,7 +10,7 @@ from django.urls import reverse
 from decimal import *
 
 
-from .models import User, Listing, Category, Bid
+from .models import *
 
 
 def index(request):
@@ -76,11 +76,14 @@ def single_listing(request, listing):
     else:
         user_is_winner = False
 
+    # create a comment model form to be displayed on the page 
+    CommentForm = modelform_factory(Comment, exclude=("commenter","listing"))
+    
     return render(request, "auctions/single_listing.html",{
-        "listing_details":listing, "user_is_winner":user_is_winner
+        "listing":listing, "user_is_winner":user_is_winner,
+        "commentform":CommentForm
     })
        
-
 @login_required(login_url="/login")
 def make_bid(request, listing_id):
     # create a new bid for a user if the amount she/he submits is valid
@@ -124,6 +127,31 @@ def close_bid(request, listing_id):
         return JsonResponse({"success":True})
 
     return JsonResponse({"success":False})
+
+@login_required
+def add_comment(request, listing_id):
+    if request.method == "POST":
+        try:
+            listing = Listing.objects.get(pk=listing_id)
+        except Listing.DoesNotExist:
+            return render(request, "auctions/errors.html", {"error_message":
+                "something went wrong with the form "})
+
+        CommentForm = modelform_factory(Comment, exclude=("commenter","listing"))
+        # validate and save from the formdata to the database
+        form = CommentForm(request.POST)
+        try:
+            comment = form.save(commit=False)
+            comment.commenter = request.user
+            comment.listing = listing
+            comment.save()
+        except:
+            # if something went wrong with comment form 
+            return render(request, "auctions/errors.html", {"error_message":
+                "something went wrong with the form submission"})
+
+        return redirect(reverse("single_listing", 
+                args=[listing.title]) +f"?id={listing.id}")
 
 @login_required(login_url="/login")
 def watchlist(request):

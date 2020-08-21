@@ -207,7 +207,7 @@ class MainViewsTests(TestCase):
 		self.assertEqual(1, len(Listing.objects.filter(title="testobject")))
 		self.assertRedirects(response, reverse("index"))
 
-	def test_create_listing_route_failed_onPOST(self):
+	def test_create_listing_route_fails_onPOST(self):
 		""" test that the route fails as expected"""
 		self.client.force_login(self.user)
 		
@@ -285,6 +285,27 @@ class MainViewsTests(TestCase):
 		
 		self.assertRedirects(response, f"/login?next={reverse('show_watchlist')}")
 
+	def test_add_or_remove_from_watchlist_route_add(self):
+		""" ensure that a listing is added to a watchlist """		
+		client = PersistentSessionClient()
+		client.force_login(self.user)
+
+		client.session["watchlist"] = []
+		client.session.save()
+		response = client.get(reverse("edit_watchlist"), data={"action":"add", 
+			"listing_id":1
+			})
+		self.assertJSONEqual(str(response.content, encoding="utf8"),
+				 {"success":True})
+
+	def test_add_or_remove_from_watchlist_route_failure(self):
+		""" ensure that the route fails when given wrong arguements"""
+		self.client.force_login(self.user)
+
+		response = self.client.get(reverse("edit_watchlist"), data={})
+		self.assertJSONEqual(str(response.content, encoding="utf8"), 
+			{"success":False, "error":"invalid argument(s)"})
+	
 	def test_single_listing_route_displays_with_valid_arguments(self):
 		""" ensure that the page displays if the id and listing name passed to
 		the url are valid """
@@ -330,27 +351,6 @@ class MainViewsTests(TestCase):
 				data={"id":1
 			})
 		self.assertFalse(response.context["user_is_winner"])
-
-	def test_add_or_remove_from_watchlist_route_add(self):
-		""" ensure that a listing is added to a watchlist """		
-		client = PersistentSessionClient()
-		client.force_login(self.user)
-
-		client.session["watchlist"] = []
-		client.session.save()
-		response = client.get(reverse("edit_watchlist"), data={"action":"add", 
-			"listing_id":1
-			})
-		self.assertJSONEqual(str(response.content, encoding="utf8"),
-				 {"success":True})
-
-	def test_add_or_remove_from_watchlist_route_failure(self):
-		""" ensure that the route fails when given wrong arguements"""
-		self.client.force_login(self.user)
-
-		response = self.client.get(reverse("edit_watchlist"), data={})
-		self.assertJSONEqual(str(response.content, encoding="utf8"), 
-			{"success":False, "error":"invalid argument(s)"})
 
 	def test_make_bid_route_valid_bid(self):
 		""" ensure that a bid object is created if the bid is valid """
@@ -413,3 +413,50 @@ class MainViewsTests(TestCase):
 		self.assertJSONEqual(str(response.content, encoding="utf8"), 
 			{"success":False
 		})
+
+	def test_add_comment_route_comment_succesfully_added(self):
+		""" ensure that a comment is added to the db on success"""
+		self.client.force_login(self.user)
+		listing = Listing.objects.get(id=1)
+
+		data = {"comment": "mr user is making a comment on his computer yeah!"}
+		response = self.client.post(reverse("add_comment", args=[listing.id]), data=data)
+
+		self.assertEqual(1, len(Comment.objects.all()))
+		self.assertEqual(listing.comments.get(id=1), Comment.objects.get(pk=1))
+
+	def test_add_comment_route_comment_redirects_onSucces(self):
+		self.client.force_login(self.user)
+		listing = Listing.objects.get(id=1)
+
+		data = {"comment": "mr user is making a comment on his computer yeah!"}
+		response = self.client.post(reverse("add_comment", args=[listing.id]), data=data)
+
+		self.assertRedirects(response, reverse("single_listing", 
+                args=[listing.title]) +f"?id={listing.id}")
+
+
+	def test_add_comment_route_handles_invalid_formData(self):
+		""" ensure that if something goes wrong an error page is rendered"""
+		self.client.force_login(self.user)
+
+		data = {}
+		response = self.client.post(reverse("add_comment", args=[1]), data=data)
+
+		# ensure that no comment object is created 
+		self.assertEqual(0, len(Comment.objects.all()))
+
+		self.assertEqual(200, response.status_code)
+		self.assertTemplateUsed(response, template_name="auctions/errors.html")
+
+
+	def test_add_comment_route_fails_when_url_arguement_isWrong(self):
+		""" ensure that a wrong url arguement passed to the route is handled well"""
+		self.client.force_login(self.user)
+
+		wrongArguement = 10000
+		data={"comment", "information"}
+		response = self.client.post(reverse("add_comment", args=[wrongArguement]))
+
+		self.assertEqual(200, response.status_code)
+		self.assertTemplateUsed(response, template_name="auctions/errors.html")

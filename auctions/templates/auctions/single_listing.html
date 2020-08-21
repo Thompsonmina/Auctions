@@ -1,15 +1,34 @@
 {% extends "auctions/layout.html" %}
 
 {% block body %}
-    <h2> Single Listing </h2>
+   <h2> Single Listing </h2>
 
-   {{ listing_details }}
+   {{ listing }}
+   {{ lisitng.comments }}
+   {% if user.is_authenticated %}
 
-   <form method="post" action="{% url 'make_bid' listing_id=listing_details.id %}">
-   	{% csrf_token %}
-   	<input type="number" step="0.01" name="bid" required="true">
-   	<input type="submit" value="Bid" required="true">
+		<button id="edit-watchlist"> {{listing.seller}}</button>
 
-   </form>
+	    <form method="post" action="{% url 'make_bid' listing_id=listing.id %}">
+		   	{% csrf_token %}
+		   	<input type="number" step="0.01" name="bid" required="true">
+		   	<input type="submit" value="Bid" required="true">
+	   	</form>
 
+		<form method="post" action="{% url 'add_comment' listing_id=listing.id %}">
+		   	{% csrf_token %}
+		   	{{ commentform }}
+		   	<input type="submit" value="comment" required="true">
+	    </form>
+
+	    {% if user_is_winner %}
+  			<p> {{user}}  has won the bid </p>
+  		{% endif %}
+
+  		{% if user == listing.seller %}
+  			<button id=close-bid> close bid</button>     
+  		{% endif %}
+
+    {% endif %}
+  	
 {% endblock %}
