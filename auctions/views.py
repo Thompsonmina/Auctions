@@ -81,7 +81,7 @@ def single_listing(request, listing):
     
     return render(request, "auctions/single_listing.html",{
         "listing":listing, "user_is_winner":user_is_winner,
-        "commentform":CommentForm
+        "commentform":CommentForm, 
     })
        
 @login_required(login_url="/login")
@@ -104,7 +104,7 @@ def make_bid(request, listing_id):
             return render(request, "auctions/errors.html", {"error_message":f"error: listing_id not valid"})
         
         # if the bid is valid create a new bid object, save to db and update the listing price
-        if listing.isValidBid(bid):
+        if listing.isActive and listing.isValidBid(bid):
             Bid.objects.create(amount=bid, listing=listing, owner=request.user)
             return redirect(reverse("single_listing", 
                 args=[listing.title]) +f"?id={listing.id}")
@@ -163,7 +163,7 @@ def watchlist(request):
 @login_required(login_url="/login")
 def add_or_delete_from_watchlist(request):
     #adds or removes a listing id from a user's watchlist
-    
+
     try: # check if arguments are valid
         listing_id = request.GET["listing_id"]
         action = request.GET["action"]
@@ -187,6 +187,17 @@ def add_or_delete_from_watchlist(request):
         return JsonResponse({"success":False, "error":"invalid argument(s)"})
 
     return JsonResponse({"success":True})
+
+def in_watchlist(request):
+    try:
+        listing_id = int(request.GET["listing_id"])
+    except:
+        return JsonResponse({"success":False, "error":"invalid argument"})
+    if request.user.is_authenticated:
+        is_in_watchlist = listing_id in request.session["watchlist"]
+        return JsonResponse({"in_watchlist": is_in_watchlist, "success":True}) 
+    else:
+        return JsonResponse({"success":False, "error":"user not logged in"})
 
 """ Authentication views """
 def login_view(request):

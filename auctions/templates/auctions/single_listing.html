@@ -1,25 +1,35 @@
 {% extends "auctions/layout.html" %}
 
 {% block body %}
-   <h2> Single Listing </h2>
+	{% load static %}
+  	<script type="text/javascript" src="{% static 'auctions/single_listing.js' %}"></script> 
+   <h2> Single Listing </h2>	
 
+
+   {{ listing.id|json_script:"get-id" }}
+   {{ is_in_watchlist|json_script:""}}
    {{ listing }}
    {{ lisitng.comments }}
+
+   <span id="id"></span>
    {% if user.is_authenticated %}
 
 		<button id="edit-watchlist"> {{listing.seller}}</button>
 
-	    <form method="post" action="{% url 'make_bid' listing_id=listing.id %}">
-		   	{% csrf_token %}
-		   	<input type="number" step="0.01" name="bid" required="true">
-		   	<input type="submit" value="Bid" required="true">
-	   	</form>
-
+		{% if listing.isActive %}
+		    <form method="post" action="{% url 'make_bid' listing_id=listing.id %}">
+			   	{% csrf_token %}
+			   	<input type="number" step="0.01" name="bid" required="true">
+			   	<input type="submit" value="Bid" required="true">
+		   	</form>
+	   	{% endif %}
+	   	
 		<form method="post" action="{% url 'add_comment' listing_id=listing.id %}">
 		   	{% csrf_token %}
 		   	{{ commentform }}
 		   	<input type="submit" value="comment" required="true">
 	    </form>
+	    
 
 	    {% if user_is_winner %}
   			<p> {{user}}  has won the bid </p>

@@ -317,7 +317,7 @@ class MainViewsTests(TestCase):
 
 		self.assertEqual(200, response.status_code)
 		self.assertTemplateUsed(response, template_name="auctions/single_listing.html")
-		self.assertEqual(listing, response.context["listing_details"])
+		self.assertEqual(listing, response.context["listing"])
 
 	def test_single_listing_route_fails_with_invalid_arguments(self):
 		""" ensure that an error page is rendered if wrong arguments are passed """
