@@ -44,18 +44,23 @@ document.addEventListener('DOMContentLoaded', function() {
 	    });
 	}
 
-	document.querySelector("#close-bid").onclick = () =>
+	document.querySelector("#close-bid").onclick = function() 
 	{    
-	    fetch(`/close_bid/${listing_id}`)
-	    // Put response into json form
-	    .then(response => response.json())
-	    .then(data => {
-	        // Log data to the console
-	        if (data.success)
-	        {
-	        	console.log("success")
-	        }
-	    });
+		close = confirm(" Are you sure you want to close the bid")
+		if (close)
+		{
+		    fetch(`/close_bid/${listing_id}`)
+		    // Put response into json form
+		    .then(response => response.json())
+		    .then(data => {
+		        // Log data to the console
+		        if (data.success)
+		        {
+		        	console.log("success")
+		        }
+		    });
+			this.parentNode.removeChild(this)
+		}
 	}
 	
 });

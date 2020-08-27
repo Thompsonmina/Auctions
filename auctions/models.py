@@ -26,6 +26,8 @@ class Listing(models.Model):
 	category = models.ForeignKey(Category, on_delete=models.CASCADE, to_field="name", related_name="listings",
 									 default=DEFAULTCATEGORY)
 
+	
+
 
 	def isClosed(self):
 		""" returns true is a listing is closed"""

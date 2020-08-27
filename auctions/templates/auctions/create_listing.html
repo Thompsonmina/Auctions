@@ -1,12 +1,17 @@
 {% extends "auctions/layout.html" %}
+{% load crispy_forms_tags %}
 
 {% block body %}
-    <form action="{% url 'create_listing' %}" method="post"> 
-    	{% csrf_token %}
-	    {{ form }}
-	    <input type="submit" value="Save and Exit">
-
-
-    </form>
+		<div class="row d-flex justify-content-center">
+			<form action="{% url 'create_listing' %}" method="post">
+		    	{% csrf_token %}
+		    	<div class="form-group">
+		    		{{ form|crispy }}
+			    	<button class="btn btn-successs" type="submit">Save and Exit</button>
+		    	</div>
+			    
+		    </form>
+		</div>
 	
+
 {% endblock %}

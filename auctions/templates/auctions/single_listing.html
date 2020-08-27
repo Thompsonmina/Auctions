@@ -1,4 +1,5 @@
 {% extends "auctions/layout.html" %}
+{% load crispy_forms_tags %}
 
 {% block body %}
 	{% load static %}
@@ -9,10 +10,24 @@
    {{ listing.id|json_script:"get-id" }}
    {{ is_in_watchlist|json_script:""}}
    {{ listing }}
-   {{ lisitng.comments }}
+
+
+   {%for bid in bids%}
+    	<div>
+    		{{ bid.amount }}
+    		{{ bid.owner }}
+    	</div>
+    {% endfor %}
+
+    {%for comment in comments%}
+    	<div>
+    		{{ comment.comment }}
+    		{{ comment.commenter }}
+    	</div>
+    {% endfor %}
 
    <span id="id"></span>
-   {% if user.is_authenticated %}
+   {% if user.is_authenticated and not user_is_winner and not user == listing.seller %}
 
 		<button id="edit-watchlist"> {{listing.seller}}</button>
 
@@ -26,7 +41,7 @@
 	   	
 		<form method="post" action="{% url 'add_comment' listing_id=listing.id %}">
 		   	{% csrf_token %}
-		   	{{ commentform }}
+		   	{{ commentform|crispy }}
 		   	<input type="submit" value="comment" required="true">
 	    </form>
 	    

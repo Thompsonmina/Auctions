@@ -21,7 +21,7 @@ def index(request):
     if request.user.is_authenticated and "watchlist" not in request.session:
         request.session["watchlist"] = []
     
-    return render(request, "auctions/index.html", {"listings": Listing.objects.filter(isActive=True).values()})
+    return render(request, "auctions/index.html", {"listings": Listing.objects.filter(isActive=True)})
 
 @login_required(login_url="/login")
 def create_listing(request):
@@ -81,7 +81,10 @@ def single_listing(request, listing):
     
     return render(request, "auctions/single_listing.html",{
         "listing":listing, "user_is_winner":user_is_winner,
-        "commentform":CommentForm, 
+        "commentform":CommentForm,
+        "bids":listing.bids.all(),
+        "comments":listing.comments.all(),
+        "category": listing.category.name 
     })
        
 @login_required(login_url="/login")

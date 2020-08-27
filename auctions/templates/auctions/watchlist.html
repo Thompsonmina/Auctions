@@ -6,9 +6,7 @@
     <h3> Remember that you can add and remove listing from your watch list in a listing's page</h3>
     
     {%for listing in listings%}
-    	<div>
-    		<a href="{% url 'single_listing' listing=listing.title %}?id={{ listing.id }}">{{ listing }}</a>
-    	</div>
+    	{% include "auctions/_listings.html" %}
     {% endfor %}
 
 
