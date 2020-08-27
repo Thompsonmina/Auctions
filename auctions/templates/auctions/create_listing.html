@@ -2,16 +2,15 @@
 {% load crispy_forms_tags %}
 
 {% block body %}
-		<div class="row d-flex justify-content-center">
-			<form action="{% url 'create_listing' %}" method="post">
-		    	{% csrf_token %}
-		    	<div class="form-group">
-		    		{{ form|crispy }}
-			    	<button class="btn btn-successs" type="submit">Save and Exit</button>
-		    	</div>
-			    
-		    </form>
-		</div>
-	
 
+	<div class="create-listing">
+		<form action="{% url 'create_listing' %}" method="post">
+    	{% csrf_token %}
+    	{% crispy form %}
+			
+		</form>	
+
+		
+	</div>
+			
 {% endblock %}

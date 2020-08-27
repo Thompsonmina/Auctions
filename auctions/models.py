@@ -1,7 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
-
 class User(AbstractUser):
     pass
 
@@ -18,16 +17,13 @@ class Listing(models.Model):
 	description = models.TextField("Listing Description")
 	isActive = models.BooleanField()
 
-	DEFAULTIMAGE = "https://www.freeiconspng.com/uploads/no-image-icon-4.png"
-	imageUrl = models.URLField("Image Link", default=DEFAULTIMAGE,
-	 help_text="enter an optional image link for your listing")
+	imageUrl = models.URLField("Image Link", 
+					help_text="if no value is put a default value will be assigned", 
+					blank=True)
 
 	DEFAULTCATEGORY = "Untagged"
 	category = models.ForeignKey(Category, on_delete=models.CASCADE, to_field="name", related_name="listings",
 									 default=DEFAULTCATEGORY)
-
-	
-
 
 	def isClosed(self):
 		""" returns true is a listing is closed"""

@@ -11,7 +11,7 @@ from decimal import *
 
 
 from .models import *
-
+from .forms import *
 
 def index(request):
     """ render the all the active listings """
@@ -26,14 +26,17 @@ def index(request):
 @login_required(login_url="/login")
 def create_listing(request):
     # create a listing model form
-    NewListingForm = modelform_factory(Listing, exclude=("seller","isActive"))
-
     if request.method == "POST":
 
         # validate and save from the formdata to the database
-        form = NewListingForm(request.POST)
+        form = ListingForm(request.POST)
+        DEFAULTIMAGEURL = "https://res.cloudinary.com/opuye/image/upload/h_300,c_scale/v1598563707/no-image.png"
+
         try:
             listing = form.save(commit=False)
+            if not listing.imageUrl:
+                listing.imageUrl = DEFAULTIMAGEURL
+
             listing.seller = request.user
             listing.isActive = True
             listing.save()
@@ -44,7 +47,7 @@ def create_listing(request):
         return redirect(reverse("index"))
     else:
         return render(request, "auctions/create_listing.html",{ 
-                        "form":NewListingForm()})
+                        "form":ListingForm(initial={"imageUrl":""})})
 
 def categories(request):
     # get all the category names from the database and render
@@ -59,7 +62,7 @@ def category_listings(request, category):
         return render(request, "auctions/errors.html", {"error_message":f"error: {category} category not valid"})
 
     category_listings = category.listings.filter(isActive=True).values()
-    return render(request, "auctions/category_listings.html", {"listings":category_listings})
+    return render(request, "auctions/category_listings.html", {"listings":category_listings, "category":category.name})
 
 def single_listing(request, listing):
     # on get display the listing if parameters are valid

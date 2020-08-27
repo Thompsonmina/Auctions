@@ -1,0 +1,17 @@
+<div class="row listing">	
+	<div class="col-4">
+		<div class="img-holder">
+			<img class="img-fluid "src="{{ listing.imageUrl }}">
+		</div>	
+	</div>	
+	<div class="col-8 listing-link" >
+		<a href="{% url 'single_listing' listing=listing.title %}?id={{ listing.id }}">
+			
+			<h4>{{ listing.title }}</h4>
+		<p>{{ listing.description }}</p>			
+		<p class="price font-weight-bold"> {{ listing.currentPrice }}</p>
+		
+		</a>
+		<a href="{% url 'category_listings' category=listing.category %}"><span class="badge badge-pill badge-primary">{{ listing.category }}</span></a>
+	</div>
+</div>

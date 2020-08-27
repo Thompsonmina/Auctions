@@ -1,12 +1,15 @@
 {% extends "auctions/layout.html" %}
 
 {% block body %}
-
-    <h2> Active Listings on your watchlist</h2>
-    <h3> Remember that you can add and remove listing from your watch list in a listing's page</h3>
-    
+	<span >
+	    <h5 class="ontop"> Watchlist </h5>
+	</span>    
     {%for listing in listings%}
     	{% include "auctions/_listings.html" %}
+    {% empty %}
+    <p>
+    	You have no listings in your watchlist yet
+    </p>  	
     {% endfor %}
 
 
