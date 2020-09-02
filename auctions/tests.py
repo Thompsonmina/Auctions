@@ -25,7 +25,7 @@ class ModelTests(TestCase):
 		cls.mike = User.objects.create_user(username="mike", password="dougyeahboyyes")
 		cls.joe = User.objects.create_user(username="joe", password="jjmyboy")
 		cls.games = Category.objects.create(name="games")
-		cls.cloak = Listing.objects.create(title="invisible_cloak", seller=cls.mike, currentPrice=49.90,
+		cls.cloak = Listing.objects.create(title="invisible_cloak", seller=cls.mike, initialPrice=49.90,
 					description="this is a description of stuff that happens when stuff happens",
 					isActive=True, imageUrl="imageurleggo", category=cls.games)
 	
@@ -51,6 +51,7 @@ class ModelTests(TestCase):
 		self.assertTrue(self.cloak.isValidBid(Decimal(4000)))
 		self.assertFalse(self.cloak.isValidBid(Decimal(1290.3)))
 
+
 	def test_listing_method_highestBidder_works(self):
 		""" ensure that the method returns the expected highest bidder"""
 		low_amount = Decimal(2100.34).quantize(Decimal("0.01"))
@@ -69,7 +70,7 @@ class ModelTests(TestCase):
 	def test_listing_method_highestBidder_return_none(self):
 		""" ensure that the method returns none if a listing does not have bids"""
 
-		item = Listing.objects.create(title="invisible_cloak", seller=self.mike, currentPrice=49.90,
+		item = Listing.objects.create(title="invisible_cloak", seller=self.mike, initialPrice=49.90,
 					description="this is a description of stuff that happens when stuff happens",
 					isActive=True, imageUrl="imageurleggo", category=self.games)
 		# no new bids are linked to item
@@ -155,12 +156,12 @@ class MainViewsTests(TestCase):
 		cls.category = Category.objects.create(name="random")
 		cls.user = User.objects.create_user(username="Tims", password="tiktok")
 		# dummy listings
-		list1 = Listing.objects.create(title="invisible_bag", seller=cls.user, currentPrice=Decimal(49.90).quantize(Decimal("0.01")),
+		list1 = Listing.objects.create(title="invisible_bag", seller=cls.user, initialPrice=Decimal(49.90).quantize(Decimal("0.01")),
 					description="this is a description of stuff that happens when stuff happens",
 					isActive=True, imageUrl="https://www.image.com", category=cls.category)
 	
 
-		list2 = Listing.objects.create(title="cloak_of_hiding", seller=cls.user, currentPrice=Decimal(49.90).quantize(Decimal("0.01")),
+		list2 = Listing.objects.create(title="cloak_of_hiding", seller=cls.user, initialPrice=Decimal(49.90).quantize(Decimal("0.01")),
 					description="this is a description of stuff that happens when stuff happens",
 					isActive=True, imageUrl="https://www.image.com", category=cls.category)
 	
@@ -198,7 +199,7 @@ class MainViewsTests(TestCase):
 	def test_create_listing_route_listing_successfully_created_onPOST(self):
 		""" test that a listing is created successfully """
 		self.client.force_login(self.user)
-		data = dict(title="testobject", currentPrice=Decimal(49.90).quantize(Decimal("0.01")),
+		data = dict(title="testobject", initialPrice=Decimal(49.90).quantize(Decimal("0.01")),
 					description="this is a description of stuff that happens when stuff happens",
 					imageUrl="https://www.image.com", category=self.category)
 	
@@ -252,7 +253,7 @@ class MainViewsTests(TestCase):
 		response = self.client.get(reverse("category_listings", args=[category]))
 
 		self.assertEqual(200, response.status_code)
-		self.assertIn("error", response.context["error_message"])
+		self.assertIn("error_message", response.context)
 		self.assertTemplateUsed(response, template_name="auctions/errors.html")
 
 	def test_watchlist_route_displays(self):
@@ -306,6 +307,51 @@ class MainViewsTests(TestCase):
 		self.assertJSONEqual(str(response.content, encoding="utf8"), 
 			{"success":False, "error":"invalid argument(s)"})
 	
+	def test_in_watchlist_route_true_if_listing_is_in_watchlist(self):
+		""" ensure that if a listing is in a user watchlist, it returns true"""
+		client = PersistentSessionClient()
+		client.force_login(self.user)
+
+		client.session["watchlist"] = [1]
+		client.session.save()
+
+		IS_LISTING_IN_WATCHLIST = True
+		response = client.get(reverse("in_watchlist"), data={"listing_id":1})
+		self.assertJSONEqual(str(response.content, encoding="utf8"), 
+			{"in_watchlist": IS_LISTING_IN_WATCHLIST, "success":True
+		})
+
+	def test_in_watchlist_route_false_if_lisiting_not_in_watchlist(self):
+		""" ensure that if a listing is in a user watchlist, it returns true"""
+		client = PersistentSessionClient()
+		client.force_login(self.user)
+
+		client.session["watchlist"] = [2]
+		client.session.save()
+
+		IS_LISTING_IN_WATCHLIST = False
+		#listing id of 21 is not in watchlist
+		response = client.get(reverse("in_watchlist"), data={"listing_id":21})
+
+		self.assertJSONEqual(str(response.content, encoding="utf8"), 
+			{"in_watchlist": IS_LISTING_IN_WATCHLIST, "success":True
+		})
+
+	def test_in_watchlist_route_expected_response_on_failure(self):
+		""" ensure that if a listing is in a user watchlist, it returns true"""
+		client = PersistentSessionClient()
+		client.force_login(self.user)
+
+		client.session["watchlist"] = [1]
+		client.session.save()
+
+		IS_LISTING_IN_WATCHLIST = True
+		response = client.get(reverse("in_watchlist"), data={"listing_id":"invalid response"
+			})
+		self.assertJSONEqual(str(response.content, encoding="utf8"), 
+			{"error":"invalid argument", "success": False
+		})
+
 	def test_single_listing_route_displays_with_valid_arguments(self):
 		""" ensure that the page displays if the id and listing name passed to
 		the url are valid """
@@ -357,20 +403,19 @@ class MainViewsTests(TestCase):
 		self.client.force_login(self.user)
 
 		listing = Listing.objects.get(pk=1)
-		bid = Decimal(5004.34)
+		bid = 123000.54
 		response = self.client.post(reverse("make_bid", args=[listing.id]), data={
 			"bid":bid
 			})
-
-		self.assertTrue(bid > Bid.objects.get(pk=1).amount)
+		
+		self.assertAlmostEqual(Decimal(bid), Bid.objects.get(pk=1).amount)
 		self.assertEqual(1, len(listing.bids.all()))
 
 	def test_make_bid_route_redirects_onSuccess(self):
-
 		self.client.force_login(self.user)
 		
 		listing = Listing.objects.get(pk=1)
-		bid = Decimal(10000.45)
+		bid = 10000.45
 		response = self.client.post(reverse("make_bid", args=[listing.id]), data={
 			"bid":bid
 		})
@@ -383,7 +428,7 @@ class MainViewsTests(TestCase):
 		self.client.force_login(self.user)
 
 		listing = Listing.objects.get(pk=1)
-		bid = 1
+		bid = 100000000008900000000000000
 		response = self.client.post(reverse("make_bid", args=[listing.id]), data={
 			"bid":bid
 		})
@@ -460,3 +505,4 @@ class MainViewsTests(TestCase):
 
 		self.assertEqual(200, response.status_code)
 		self.assertTemplateUsed(response, template_name="auctions/errors.html")
+

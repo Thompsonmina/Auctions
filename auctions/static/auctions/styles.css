@@ -57,3 +57,75 @@ body {
 	color: inherit;
 	text-decoration: none;
 }
+.review-div{padding: 50px, 50px, 20px,50px;}
+
+.review-card 
+{
+  box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);
+  transition: 0.3s;
+  width: 100%;
+  border-radius: 5px;
+ 
+  padding: 20px 20px 5px 20px;
+  margin-bottom: 30px
+ 	
+  width: 0.8em;
+  min-height: 10em;
+  background-color: #E8E8E8;  
+}
+
+.bid-holder
+{
+	padding-left: 10%;
+	padding-right: 15%;
+}
+
+.other-listing-details
+{
+	padding-left: 10%;
+	padding-right: 15%;
+	padding-top: 3%;
+	padding-bottom: 3%;
+}
+
+.other-listing-details > div
+{
+	border: #bdbdbd 0.5px solid;
+	padding: 2%;
+}
+
+.comment-box
+{
+	border: #bdbdbd 0.5px solid;
+	background-color: #F5F5F5;
+	height: 300px;
+	width: 500px;
+	overflow-y: auto;
+}
+@media only screen and (min-width: 768px) {
+	.comment-box
+	{
+		height: 400px;
+		width: 800px;
+	}
+}
+
+
+.comment-box-holder
+{
+	padding-top: 3%;
+	padding-bottom: 5%;
+}
+
+.comment
+{
+	padding: 3.5%;
+	border-bottom: 0.5px solid lightgrey;
+}
+
+.category
+{
+	padding-left: 5%;
+	padding-top: 1%;
+	padding-bottom: 1%;
+}

@@ -4,56 +4,129 @@
 {% block body %}
 	{% load static %}
   	<script type="text/javascript" src="{% static 'auctions/single_listing.js' %}"></script> 
-   <h2> Single Listing </h2>	
-
-
    {{ listing.id|json_script:"get-id" }}
    {{ is_in_watchlist|json_script:""}}
-   {{ listing }}
 
+    {% if not listing.isActive %}
+      <div class="alert alert-danger" role="alert">
+        This listing is no longer active 
+      </div>
+   {% endif %}
 
-   {%for bid in bids%}
-    	<div>
-    		{{ bid.amount }}
-    		{{ bid.owner }}
-    	</div>
-    {% endfor %}
+   {% if user_is_winner %}
+    <div class="alert alert-secondary" role="alert">
+         Congratulations {{user}}  you have won the bid 
+    </div>
+  {% endif %}
 
-    {%for comment in comments%}
-    	<div>
-    		{{ comment.comment }}
-    		{{ comment.commenter }}
-    	</div>
-    {% endfor %}
-
-   <span id="id"></span>
-   {% if user.is_authenticated and not user_is_winner and not user == listing.seller %}
-
-		<button id="edit-watchlist"> {{listing.seller}}</button>
-
-		{% if listing.isActive %}
-		    <form method="post" action="{% url 'make_bid' listing_id=listing.id %}">
-			   	{% csrf_token %}
-			   	<input type="number" step="0.01" name="bid" required="true">
-			   	<input type="submit" value="Bid" required="true">
-		   	</form>
-	   	{% endif %}
-	   	
-		<form method="post" action="{% url 'add_comment' listing_id=listing.id %}">
-		   	{% csrf_token %}
-		   	{{ commentform|crispy }}
-		   	<input type="submit" value="comment" required="true">
-	    </form>
-	    
-
-	    {% if user_is_winner %}
-  			<p> {{user}}  has won the bid </p>
-  		{% endif %}
-
-  		{% if user == listing.seller %}
-  			<button id=close-bid> close bid</button>     
-  		{% endif %}
-
+    {% if user == listing.seller %}
+      <div class="row ">
+          <div class="col" style="padding-left: 5%; padding-top: 2.5%;">
+            <button id="close-bid" class="btn btn-outline-danger"> Close Bid</button>
+          </div>
+      </div>
+    {% else %}
+       <div class="row ">
+          <div class="col" style="padding-left: 5%; padding-top: 2.5%; padding-bottom: 1.5%">
+            <button class="btn btn-outline-primary" id="edit-watchlist"></button>
+          </div>
+        </div> 
     {% endif %}
+      
+   <div class="row ">
+      <div class="col">
+        <div class="img-holder d-flex justify-content-center align-items-center">
+          <img class="img-fluid "src="{{ listing.imageUrl }}">
+        </div>  
+      </div>
+    </div>  
+
+    <div class="row">
+      <div class="col">
+        <div class="d-flex justify-content-center align-items-center">
+          <h4>{{ listing.title }}</h4>  
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col">
+        <div class="d-flex justify-content-center align-items-center">
+          <p class="price font-weight-bold">{% if listing.highestBid.amount %}  {{ listing.highestBid.amount }} {% else %} {{listing.initialPrice}} {% endif %}</p> 
+        </div>
+      </div>
+    </div>
+       
+  {% if user.is_authenticated and not user_is_winner and not user == listing.seller %}
+
+    {% if listing.isActive %}
+      <div class="row bid-holder">
+        <div class="col" >
+          <small>{{listing.bids.count}} bids in total. {% if user == listing.highestBidder %}your bid is the leading bid{%endif%} </small>
+          <form method="post" action="{% url 'make_bid' listing_id=listing.id %}">
+            {% csrf_token %}
+            <div class="input-group mb-4">
+                <input autofocus class="form-control" type="number" step="0.01" name="bid" required="true">
+              <div class="input-group-append">
+                  <button class="btn btn-outline-primary" type="submit">Place Bid</button>
+              </div>
+            </div>
+          </form>
+        </div>    
+      </div>
+    {% endif %}
+      
+  {% endif %}
+
+    <div class="row">
+        <div class="col other-listing-details">
+          <div>
+            <h5> Details</h5>
+            <ul class="list-unstyled">
+              <li>Listed By: {{ listing.seller }}</li>
+              <li>Category: {{listing.category}}</li>
+              <li>Description: <p>{{listing.description}}</p></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col bid-holder">
+          <form method="post" action="{% url 'add_comment' listing_id=listing.id %}">
+            {% csrf_token %}
+          <div>
+            {{ commentform|crispy }}
+            <input class="btn btn-primary" type="submit" value="Comment" required="true">
+          </div>
+          </form>
+        </div>
+      </div>
+  
+
+    <div class="row">
+      <div class="col d-flex justify-content-center align-items-center comment-box-holder">
+        
+        <div class="comment-box">
+          <h3 class="d-flex justify-content-center"> Comments </h3>
+          {% for comment in listing.comments.all %}
+            <div class="comment">
+              <h5> {{ comment.commenter }} says:  </h5>
+              <p>{{ comment.comment }} </p>
+            </div>
+           {% endfor %}
+        </div>
+    
+      </div>
+    </div>
   	
+    <script type="text/javascript">
+      document.querySelector("textarea").rows = 4
+
+      if (document.querySelectorAll(".comment-box > .comment").length === 0)
+      {
+        document.querySelector(".comment-box").style.display = "none"
+      }  
+      
+    </script>
 {% endblock %}

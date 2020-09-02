@@ -19,7 +19,7 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav">
+                <ul class="navbar-nav ml-auto mt-2">
                     <li class="nav-item active">
                         <a class="nav-link" href="{% url 'index' %}">Active Listings</a>
                     </li>
@@ -85,10 +85,13 @@
         minimunFractionDigits: 2
     });
     document.querySelectorAll(".price").forEach(function(price){
-        price.innerText = formatter.format(parseInt(price.innerText))
+        console.log(price.innerText)
+        price.innerText = formatter.format(price.innerText)
+        console.log(price.innerText)
     });
 
 </script>
 
     </body>
 </html>
+

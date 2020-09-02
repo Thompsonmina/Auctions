@@ -59,10 +59,10 @@ def category_listings(request, category):
     try:
         category = Category.objects.get(name=category)
     except  Category.DoesNotExist:
-        return render(request, "auctions/errors.html", {"error_message":f"error: {category} category not valid"})
+        return render(request, "auctions/errors.html", {"error_message":f"the url argument {category} is not valid"})
 
     category_listings = category.listings.filter(isActive=True).values()
-    return render(request, "auctions/category_listings.html", {"listings":category_listings, "category":category.name})
+    return render(request, "auctions/category_listings.html", {"listings":category_listings})
 
 def single_listing(request, listing):
     # on get display the listing if parameters are valid
@@ -70,7 +70,7 @@ def single_listing(request, listing):
         listing = Listing.objects.get(id=request.GET["id"], title=listing)
     except Listing.DoesNotExist:
          return render(request, "auctions/errors.html", {
-            "error_message":"error: listing does not exist"
+            "error_message":"listing does not exist, url arguements might be wrong"
         })
     
     # if the user is logged in and the listing is closed, check if the user is the winner of the bid
@@ -79,14 +79,13 @@ def single_listing(request, listing):
     else:
         user_is_winner = False
 
+
     # create a comment model form to be displayed on the page 
     CommentForm = modelform_factory(Comment, exclude=("commenter","listing"))
     
     return render(request, "auctions/single_listing.html",{
         "listing":listing, "user_is_winner":user_is_winner,
         "commentform":CommentForm,
-        "bids":listing.bids.all(),
-        "comments":listing.comments.all(),
         "category": listing.category.name 
     })
        
@@ -96,13 +95,15 @@ def make_bid(request, listing_id):
     if request.method == "POST":
         bid = request.POST["bid"]
 
-         # create a new decimal 
+        # create a new decimal and verify that its valid
+        getcontext().prec = 12
         try:
-            bid = Decimal(bid).quantize(Decimal("0.01"))
+            bid = Decimal(bid).quantize(Decimal("0.01"),rounding=ROUND_DOWN)
         except InvalidOperation:
             return render(request, "auctions/errors.html", {
-                "error_message":"error, invalid parameter"}
-                )
+                "error_message":
+                "Invalid parameter: the arguement you passed as a bid is not in the correct format"
+                })
        # might add test case
         try:
             listing = Listing.objects.get(pk=listing_id)
@@ -114,14 +115,15 @@ def make_bid(request, listing_id):
             Bid.objects.create(amount=bid, listing=listing, owner=request.user)
             return redirect(reverse("single_listing", 
                 args=[listing.title]) +f"?id={listing.id}")
-           
+            
         # render error if the bid doesn't pass requirements
         return render(request, "auctions/errors.html", {
-            "error_message":"error, your bid is too small"
+            "error_message":" your bid is not valid, it's too small"
         }) 
 
 @login_required(login_url="/login")
-def close_bid(request, listing_id): 
+def close_bid(request, listing_id):
+    """ turns a listing inactive, so no more bids can be made""" 
     try:
        listing = Listing.objects.get(pk=listing_id) 
     except  Listing.DoesNotExist:
@@ -136,12 +138,13 @@ def close_bid(request, listing_id):
 
 @login_required
 def add_comment(request, listing_id):
+    """ get a comment message from the listing page and add it"""
     if request.method == "POST":
         try:
             listing = Listing.objects.get(pk=listing_id)
         except Listing.DoesNotExist:
             return render(request, "auctions/errors.html", {"error_message":
-                "something went wrong with the form "})
+                "something went wrong, the id url argument is not valid"})
 
         CommentForm = modelform_factory(Comment, exclude=("commenter","listing"))
         # validate and save from the formdata to the database
@@ -154,7 +157,7 @@ def add_comment(request, listing_id):
         except:
             # if something went wrong with comment form 
             return render(request, "auctions/errors.html", {"error_message":
-                "something went wrong with the form submission"})
+                "something went wrong with the submission of your comment, try again"})
 
         return redirect(reverse("single_listing", 
                 args=[listing.title]) +f"?id={listing.id}")
@@ -195,6 +198,7 @@ def add_or_delete_from_watchlist(request):
     return JsonResponse({"success":True})
 
 def in_watchlist(request):
+    """ check if a listing is a user's watchlist and returns a json response signifying"""
     try:
         listing_id = int(request.GET["listing_id"])
     except:

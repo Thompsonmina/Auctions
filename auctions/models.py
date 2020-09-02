@@ -13,7 +13,7 @@ class Category(models.Model):
 class Listing(models.Model):
 	title = models.CharField("Listing Title", max_length=100)
 	seller = models.ForeignKey(User, on_delete=models.CASCADE, related_name="listings")
-	currentPrice = models.DecimalField("Start price", max_digits=12, decimal_places=2)
+	initialPrice = models.DecimalField("Start price", max_digits=12, decimal_places=2)
 	description = models.TextField("Listing Description")
 	isActive = models.BooleanField()
 
@@ -37,20 +37,28 @@ class Listing(models.Model):
 		bid = self.bids.all().aggregate(models.Max("amount"))["amount__max"]
 		if bid:
 			return newBid > bid
-		return newBid >= self.currentPrice
+		return newBid >= self.initialPrice
 
-	def highestBidder(self):
-		""" returns the owner of the highest bid, or none if listing doesn't exist"""
+	def highestBid(self):
 		highest_bid = self.bids.all().aggregate(models.Max("amount"))["amount__max"]
 		try:
 			highest_bid = Bid.objects.get(amount=highest_bid)
 		except Bid.DoesNotExist:
 			return None
 
-		return highest_bid.owner
+		return highest_bid
+
+	def highestBidder(self):
+		""" returns the owner of the highest bid, or none if listing doesn't exist"""
+		bid = self.highestBid()
+
+		if bid is not None:
+			return bid.owner
+		else:
+			return None
 
 	def __str__(self):
-		return f"{self.title} currently selling at ${self.currentPrice}"
+		return f"{self.title} currently selling at ${self.initialPrice}"
 
 class Bid(models.Model):
 	amount = models.DecimalField(max_digits=12, decimal_places=2)
@@ -58,7 +66,7 @@ class Bid(models.Model):
 	owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name="bids")
 
 	def __str__(self):
-		return f"bid for {self.listing.title}"
+		return f"{self.amount} bid for {self.listing.title}"
 
 class Comment(models.Model):
 	comment = models.TextField("Leave a comment")

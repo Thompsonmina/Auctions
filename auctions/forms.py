@@ -15,7 +15,7 @@ class ListingForm(ModelForm):
 		self.helper.layout = Layout(
 			Row(
 				Column("title", css_class="form-group col-md-8 mb-0"),
-				Column("currentPrice", css_class="form-group col-md-4 mb-0"),
+				Column("initialPrice", css_class="form-group col-md-4 mb-0"),
 				css_class="form-row"
 			),
 			"description",

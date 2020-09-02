@@ -2,7 +2,14 @@
 
 {% block body %}
 
-    {{ error_message }}
-
+    
+    <div class="row errors">
+    	<div class="col d-flex justify-content-center align-items-center">
+    		<div class="">
+    			<h1>Error! </h1>
+    			<p style="font-size: 1.2rem;"> {{ error_message }} </p>
+    		</div>	
+    	</div>
+    </div>
 
 {% endblock %}
