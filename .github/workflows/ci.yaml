@@ -9,7 +9,7 @@ jobs:
       - name: Run Django unit tests
         run: |
           export SECRET_KEY="justforgithubenv"
-          export ALLOWED_HOSTS=.localhost, .herokuapp.com
+          export ALLOWED_HOSTS=".localhost, .herokuapp.com"
           pip3 install --user setuptools
           pip3 install --user -r requirements.txt
           python3 manage.py test
